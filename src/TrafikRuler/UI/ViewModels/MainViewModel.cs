@@ -1,3 +1,4 @@
+using TrafikRuler.Native;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -317,7 +318,17 @@ internal sealed class MainViewModel : ObservableObject, IDisposable
     private void CountProcesses()
     {
         var rules = Rules.Select(r => r.Rule).ToList();
-        Task.Run(() => rules.ToDictionary(r => r.Id, r => _engine.FindProcesses(r).Count))
+        Task.Run(() =>
+        {
+            var connections = IpHelper.GetTcpConnections(false).Concat(IpHelper.GetTcpConnections(true)).ToArray();
+            return rules.ToDictionary(r => r.Id, r =>
+            {
+                var pids = _engine.FindProcesses(r);
+                var adapter = _engine.Adapters.FirstOrDefault(a => a.Id == r.AdapterId);
+                System.Net.IPAddress? target = adapter?.IPv4 is { } ip ? System.Net.IPAddress.Parse(Addr.Format(ip)) : null;
+                return (Count: pids.Count, Evidence: ConnectionDiagnostics.Inspect(pids, connections, target));
+            });
+        })
             .ContinueWith(t =>
             {
                 if (!t.IsCompletedSuccessfully)
@@ -325,8 +336,11 @@ internal sealed class MainViewModel : ObservableObject, IDisposable
                 _dispatcher.BeginInvoke(() =>
                 {
                     foreach (var card in Rules)
-                        if (t.Result.TryGetValue(card.Id, out int n))
-                            card.Processes = n;
+                        if (t.Result.TryGetValue(card.Id, out var result))
+                        {
+                            card.SetEvidence(result.Evidence);
+                            card.Processes = result.Count;
+                        }
                 });
             });
     }

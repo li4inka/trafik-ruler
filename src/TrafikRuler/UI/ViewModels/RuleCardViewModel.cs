@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Media;
 using TrafikRuler.Core;
 using TrafikRuler.Localization;
@@ -16,6 +17,16 @@ internal sealed class RuleCardViewModel : ObservableObject
     private string _stateText = "", _stateKind = "Off", _adapterText = "", _adapterGlyph = Glyphs.Globe;
     private string _statsText = "", _downSpeed = Format.Speed(0), _upSpeed = Format.Speed(0);
     private int _processes;
+    private bool _processesKnown, _paused;
+    private bool _pathMissing;
+    private ConnectionEvidence _evidence = new([], 0);
+    public string DiagnosticText => _evidence.LocalEndpoints.Length > 0 ? Loc.T("LocalConnectionHelp", string.Join(", ", _evidence.LocalEndpoints)) : PathText;
+    public void SetEvidence(ConnectionEvidence evidence)
+    {
+        _evidence = evidence;
+        OnPropertyChanged(nameof(DiagnosticText));
+        UpdateStats();
+    }
     private double[] _downHistory = new double[SpeedHistory.Length];
     private double[] _upHistory = new double[SpeedHistory.Length];
 
@@ -32,7 +43,9 @@ internal sealed class RuleCardViewModel : ObservableObject
     public ImageSource? Icon { get; private set; }
     public bool HasIcon => Icon != null;
     public string Name => _view.Rule.DisplayName;
-    public string PathText => _view.Rule.MatchesByNameOnly ? Loc.T("AnyFolder", _view.Rule.ProgramPath) : _view.Rule.ProgramPath;
+    public string PathText => _pathMissing
+        ? Loc.T("PathMissingHelp", _view.Rule.ProgramPath)
+        : _view.Rule.MatchesByNameOnly ? Loc.T("AnyFolder", _view.Rule.ProgramPath) : _view.Rule.ProgramPath;
 
     public bool IsEnabled
     {
@@ -65,8 +78,9 @@ internal sealed class RuleCardViewModel : ObservableObject
         get => _processes;
         set
         {
-            if (Set(ref _processes, value))
-                UpdateStats();
+            _processesKnown = true;
+            Set(ref _processes, value);
+            UpdateStats();
         }
     }
 
@@ -74,6 +88,8 @@ internal sealed class RuleCardViewModel : ObservableObject
     {
         bool pathChanged = !string.Equals(view.Rule.ProgramPath, _view.Rule.ProgramPath, StringComparison.OrdinalIgnoreCase);
         _view = view;
+        _paused = paused;
+        _pathMissing = !view.Rule.MatchesByNameOnly && !File.Exists(view.Rule.ProgramPath);
         if (pathChanged)
         {
             Icon = IconCache.Get(view.Rule.ProgramPath);
@@ -97,14 +113,26 @@ internal sealed class RuleCardViewModel : ObservableObject
             AdapterGlyph = Glyphs.Globe;
         }
 
+        UpdateStats();
+    }
+
+    private void UpdateState()
+    {
+        var view = _view;
         (StateText, StateKind) = view.State switch
         {
-            RuleState.Active => (Loc.T("StateActive"), "Ok"),
+            RuleState.Active when Volatile.Read(ref view.Stats.ActiveFlows) > 0 => (Loc.T("StateActive"), "Ok"),
+            RuleState.Active when _evidence.TargetConnections > 0 => (Loc.T("StateAlreadyTarget"), "Ok"),
+            RuleState.Active when _evidence.LocalEndpoints.Length > 0 => (Loc.T("StateLocalConnection"), "Warn"),
+            RuleState.Active when !_processesKnown => (Loc.T("StateChecking"), "Warn"),
+            RuleState.Active when _processes == 0 && _pathMissing => (Loc.T("StatePathMissing"), "Warn"),
+            RuleState.Active when _processes == 0 => (Loc.T("StateNoProcess"), "Warn"),
+            RuleState.Active => (Loc.T("StateAwaitingConnection"), "Warn"),
             RuleState.Blocking => (Loc.T("StateBlocking"), "Error"),
             RuleState.Waiting => (Loc.T("StateWaiting"), "Warn"),
-            _ => (paused && view.Rule.Enabled ? Loc.T("StatePaused") : Loc.T("StateOff"), "Off"),
+            _ => (_paused && view.Rule.Enabled ? Loc.T("StatePaused") : Loc.T("StateOff"), "Off"),
         };
-        UpdateStats();
+
     }
 
     /// <summary>Раз в секунду: скорость и график.</summary>
@@ -132,6 +160,7 @@ internal sealed class RuleCardViewModel : ObservableObject
 
     private void UpdateStats()
     {
+        UpdateState();
         var s = _view.Stats;
         var parts = new List<string>
         {

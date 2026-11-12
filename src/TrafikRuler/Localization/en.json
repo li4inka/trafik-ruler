@@ -38,6 +38,9 @@
   "PluralActiveRules": { "one": "{0} active rule", "other": "{0} active rules" },
 
   // Rule card
+  "StatePathMissing":"Program path unavailable", "PathMissingHelp":"Path unavailable: {0}\nSelect the program again, or match by file name (all programs with that name).",
+  "StateAlreadyTarget":"Connected from target address", "StateLocalConnection":"Local connection / possible proxy", "LocalConnectionHelp":"Connected to local endpoints: {0}\nA local proxy may forward traffic under another process. Its adapter must be configured separately. Other direct connections may also exist.",
+  "StateChecking":"Checking processes", "StateNoProcess":"No matching process", "StateAwaitingConnection":"Waiting for routed connection",
   "StateActive": "Active",
   "StateBlocking": "Blocking",
   "StateWaiting": "Waiting for adapter",
@@ -85,6 +88,7 @@
   "ByNameToggle": "Match by file name only (exe from any folder)",
   "SendVia": "Send traffic through",
   "Advanced": "Advanced",
+  "KillSwitchTitle": "Kill switch",
   "KillSwitchDesc": "If the adapter disappears, the program loses network access instead of going through another adapter",
   "RuleEnabled": "Rule enabled",
   "RuleEnabledDesc": "A disabled rule is kept but has no effect",

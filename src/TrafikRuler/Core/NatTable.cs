@@ -39,6 +39,7 @@ internal sealed class FlowEntry
     public int Closing;
     /// <summary>1, если поток учтён в RuleStats.ActiveFlows.</summary>
     public int Counted;
+    public bool TrackDirect { get; init; }
 }
 
 /// <summary>
@@ -89,11 +90,11 @@ internal sealed class NatTable
             }
         }
 
-        if (entry.Action == FlowAction.Nat)
+        if (entry.Action == FlowAction.Nat || entry.TrackDirect)
         {
             if (entry.Rule != null && Interlocked.Exchange(ref entry.Counted, 1) == 0)
                 Interlocked.Increment(ref entry.Rule.Stats.ActiveFlows);
-            if (entry.Key.Protocol == Packet.ProtoUdp)
+            if (entry.Action == FlowAction.Nat && entry.Key.Protocol == Packet.ProtoUdp)
                 _udpEndpoints[(entry.Key.LocalPort, entry.NatLocal)] = entry;
         }
         return entry;
@@ -109,11 +110,11 @@ internal sealed class NatTable
 
     private void Release(FlowEntry entry)
     {
-        if (entry.Action != FlowAction.Nat)
+        if (entry.Action != FlowAction.Nat && !entry.TrackDirect)
             return;
         if (entry.Rule != null && Interlocked.Exchange(ref entry.Counted, 0) == 1)
             Interlocked.Decrement(ref entry.Rule.Stats.ActiveFlows);
-        if (entry.Key.Protocol == Packet.ProtoUdp)
+        if (entry.Action == FlowAction.Nat && entry.Key.Protocol == Packet.ProtoUdp)
             _udpEndpoints.TryRemove(new KeyValuePair<(ushort, UInt128), FlowEntry>((entry.Key.LocalPort, entry.NatLocal), entry));
     }
 

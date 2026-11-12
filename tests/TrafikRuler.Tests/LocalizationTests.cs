@@ -17,6 +17,7 @@ public class LocalizationTests
     private static readonly Dictionary<string, string[]> RequiredPluralForms = new()
     {
         ["en"] = ["one", "other"],
+        ["zh"] = ["other"],
         ["ru"] = ["one", "few", "many"],
     };
 
@@ -99,9 +100,13 @@ public class LocalizationTests
     [InlineData("en", 1, "one")]
     [InlineData("en", 0, "other")]
     [InlineData("en", 2, "other")]
+    [InlineData("zh", 1, "other")]
+    [InlineData("zh", 2, "other")]
     public void PluralRules(string lang, long n, string form) => Assert.Equal(form, Loc.PluralForm(lang, n));
 
     [Theory]
+    [InlineData("zh-CN", null, "zh")]
+    [InlineData("en-US", "zh-CN", "zh")]
     [InlineData("ru-RU", null, "ru")]
     [InlineData("en-US", null, "en")]
     [InlineData("de-DE", null, "en")]
@@ -125,6 +130,10 @@ public class LocalizationTests
             Assert.Equal("1,5 КБ", Format.Bytes(1536));
             Assert.Equal("Настройки", Loc.Instance["Settings"]);
 
+            Assert.Equal("zh", Loc.SetLanguage("zh"));
+            Assert.Equal("设置", Loc.T("Settings"));
+            Assert.Equal("1 个进程", Loc.Plural("PluralProcesses", 1));
+            Assert.Equal("5 个进程", Loc.Plural("PluralProcesses", 5));
             Assert.Equal("en", Loc.SetLanguage("en"));
             Assert.Equal("Settings", Loc.T("Settings"));
             Assert.Equal("1 process", Loc.Plural("PluralProcesses", 1));

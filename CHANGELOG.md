@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Simplified Chinese localization, automatic language selection, and live language switching.
+- Per-rule TCP connection diagnostics for loopback endpoints and connections using the target adapter address.
+- Warnings for unavailable executable paths and rules without matching processes.
+
+### Changed
+
+- Distinguish routing readiness, process detection, and observed routed connections in rule cards.
+- Keep adapter cards at a fixed width so changing throughput values do not shift the layout.
+
+### Fixed
+
+- Count traffic and tracked flows already using the selected adapter without rewriting their packets.
+
+### Validation
+
+- 98 automated tests passed before the final adapter layout change; the final layout Release build passed.
+- User reported successful connectivity after closing Clash; independent public egress verification remains pending.
+
 ## [1.1.0] - 2026-10-15
 
 ### Added

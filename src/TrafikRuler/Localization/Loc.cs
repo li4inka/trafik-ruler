@@ -21,6 +21,7 @@ public sealed class Loc : INotifyPropertyChanged
     public static IReadOnlyList<(string Code, string NativeName)> Languages { get; } =
     [
         ("en", "English"),
+        ("zh", "简体中文"),
         ("ru", "Русский"),
     ];
 
@@ -82,6 +83,8 @@ public sealed class Loc : INotifyPropertyChanged
     /// </summary>
     public static string Detect(CultureInfo ui, string? firstPreferred = null)
     {
+        if (ui.TwoLetterISOLanguageName == "zh") return "zh";
+        if (firstPreferred != null && (firstPreferred.Equals("zh", StringComparison.OrdinalIgnoreCase) || firstPreferred.StartsWith("zh-", StringComparison.OrdinalIgnoreCase))) return "zh";
         if (ui.TwoLetterISOLanguageName == "ru")
             return "ru";
         if (firstPreferred != null && (firstPreferred == "ru" || firstPreferred.StartsWith("ru-", StringComparison.OrdinalIgnoreCase)))
@@ -128,6 +131,7 @@ public sealed class Loc : INotifyPropertyChanged
 
     internal static string PluralForm(string language, long n)
     {
+        if (language == "zh") return "other";
         if (language == "ru")
         {
             long n100 = Math.Abs(n) % 100, n10 = n100 % 10;
