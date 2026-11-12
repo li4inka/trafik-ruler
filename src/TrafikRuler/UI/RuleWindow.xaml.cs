@@ -64,7 +64,9 @@ internal partial class RuleWindow : Window
 
     private static AdapterOption Describe(AdapterInfo a)
     {
-        string ip = a.IPv4 is { } v4 ? Addr.Format(v4) : Loc.T("NoIPv4");
+        string ip = a.IPv4 is { } v4 ? Addr.Format(v4)
+            : a.IPv6 is { } v6 ? Addr.Format(v6)
+            : Loc.T("NoIP");
         string detail = a.IsUp ? $"{ip} · {a.Description}" : Loc.T("AdapterDisconnectedDetail", a.Description);
         return new AdapterOption(a, Glyphs.ForAdapter(a.Kind), a.Name, a.KindLabel, detail, a.IsUsable);
     }
@@ -108,7 +110,7 @@ internal partial class RuleWindow : Window
         {
             null => Loc.T("HintSelectAdapter"),
             { IsUp: false } => Loc.T("HintAdapterDown"),
-            { IPv4: null } => Loc.T("HintNoIPv4"),
+            { IPv4: null, IPv6: null } => Loc.T("HintNoIP"),
             { HasGateway: false, Kind: not AdapterKind.Vpn } => Loc.T("HintNoGateway"),
             { IPv6: null } => Loc.T("HintNoIPv6"),
             _ => "",

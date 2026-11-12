@@ -39,8 +39,8 @@ internal sealed class AdapterInfo
     public bool HasGateway { get; init; }
     public IReadOnlyList<Subnet> Subnets { get; init; } = Array.Empty<Subnet>();
 
-    /// <summary>Через адаптер можно отправлять IPv4-трафик.</summary>
-    public bool IsUsable => IsUp && IPv4 != null && IfIndex != 0;
+    /// <summary>Через адаптер можно отправлять IPv4- и/или IPv6-трафик.</summary>
+    public bool IsUsable => IsUp && IfIndex != 0 && (IPv4 != null || IPv6 != null);
 
     public string KindLabel => Kind switch
     {
@@ -54,7 +54,9 @@ internal sealed class AdapterInfo
     {
         get
         {
-            string ip = IPv4 is { } a ? Addr.Format(a) : Loc.T("NoIPv4");
+            string ip = IPv4 is { } v4 ? Addr.Format(v4)
+                : IPv6 is { } v6 ? Addr.Format(v6)
+                : Loc.T("NoIP");
             string state = IsUp ? ip : Loc.T("AdapterDisconnected");
             return $"{KindLabel}: {Name} ({state})";
         }
@@ -135,6 +137,7 @@ internal static class AdapterService
 
         UInt128? ipv4 = null;
         UInt128? ipv6 = null;
+        int ipv6Rank = int.MaxValue;
         var subnets = new List<Subnet>();
         foreach (var ua in props.UnicastAddresses)
         {
@@ -142,7 +145,7 @@ internal static class AdapterService
             if (ip.AddressFamily == AddressFamily.InterNetwork)
             {
                 var a = Addr.FromIPAddress(ip);
-                int prefix = ua.PrefixLength is > 0 and <= 32 ? ua.PrefixLength : 32;
+                int prefix = ua.PrefixLength is >= 0 and <= 32 ? ua.PrefixLength : 32;
                 subnets.Add(Subnet.From(a, prefix, v4: true));
                 bool apipa = ip.GetAddressBytes() is [169, 254, ..];
                 if (ipv4 == null && !apipa)
@@ -150,15 +153,21 @@ internal static class AdapterService
             }
             else if (ip.AddressFamily == AddressFamily.InterNetworkV6)
             {
-                if (ip.IsIPv6LinkLocal)
+                if (ip.IsIPv6LinkLocal || ip.IsIPv6Multicast)
                     continue;
                 var a = Addr.FromIPAddress(ip);
-                int prefix = ua.PrefixLength is > 0 and <= 128 ? ua.PrefixLength : 128;
+                int prefix = ua.PrefixLength is >= 0 and <= 128 ? ua.PrefixLength : 128;
                 subnets.Add(Subnet.From(a, prefix, v4: false));
                 byte first = ip.GetAddressBytes()[0];
                 bool global = (first & 0xE0) == 0x20; // 2000::/3
-                if (ipv6 == null && global && ua.DuplicateAddressDetectionState == DuplicateAddressDetectionState.Preferred)
+                bool uniqueLocal = (first & 0xFE) == 0xFC; // fc00::/7
+                int rank = global ? 0 : uniqueLocal ? 1 : 2;
+                if (ua.DuplicateAddressDetectionState == DuplicateAddressDetectionState.Preferred
+                    && rank < ipv6Rank)
+                {
                     ipv6 = a;
+                    ipv6Rank = rank;
+                }
             }
         }
 

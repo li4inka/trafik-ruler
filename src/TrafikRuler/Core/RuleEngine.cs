@@ -214,7 +214,9 @@ internal sealed class RuleEngine : IDisposable
         if (!string.Equals(old.Rule.ProgramPath, r.Rule.ProgramPath, StringComparison.OrdinalIgnoreCase))
             return true;
         if (r.State == RuleState.Active)
-            return old.Target?.IfIndex != r.Target?.IfIndex || old.Target?.IPv4 != r.Target?.IPv4;
+            return old.Target?.IfIndex != r.Target?.IfIndex
+                || old.Target?.IPv4 != r.Target?.IPv4
+                || old.Target?.IPv6 != r.Target?.IPv6;
         return false;
     }
 

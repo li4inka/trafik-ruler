@@ -87,7 +87,9 @@ internal sealed class RuleCardViewModel : ObservableObject
         var target = view.Target;
         if (target != null)
         {
-            string ip = target.IPv4 is { } a ? Addr.Format(a) : Loc.T("NoIPv4");
+            string ip = target.IPv4 is { } v4 ? Addr.Format(v4)
+                : target.IPv6 is { } v6 ? Addr.Format(v6)
+                : Loc.T("NoIP");
             AdapterText = $"{target.Name} · {ip}";
             AdapterGlyph = Glyphs.ForAdapter(target.Kind);
         }

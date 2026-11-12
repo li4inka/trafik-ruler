@@ -154,7 +154,7 @@ internal sealed class PacketProcessor
         if (IsSpecialDestination(info.Dst))
             return Pass();
 
-        uint? pid = _resolver.ResolvePid(info.Protocol, info.SrcPort);
+        uint? pid = _resolver.ResolvePid(info.Protocol, info.SrcPort, info.IsV6);
         if (pid == null)
         {
             // Владелец порта пока неизвестен (событие сокета ещё не дошло). Пропускаем пакет, а решение
