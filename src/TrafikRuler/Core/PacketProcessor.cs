@@ -130,6 +130,11 @@ internal sealed class PacketProcessor
                 return false;
 
             default:
+                if (entry.TrackDirect && entry.Rule != null)
+                {
+                    Interlocked.Add(ref entry.Rule.Stats.BytesOut, info.Length);
+                    if (info.IsFin || info.IsRst) entry.Closing = 1;
+                }
                 return true;
         }
     }
@@ -178,7 +183,12 @@ internal sealed class PacketProcessor
 
         var target = rule.Target!;
         if (addr.IfIdx == target.IfIndex)
-            return Pass(rule: rule); // и так идёт через нужный адаптер
+            return Table.Put(new FlowEntry
+            {
+                Key = key, Action = FlowAction.Pass, Generation = snap.Generation, Rule = rule,
+                IsV6 = isV6, LastSeen = now, TrackDirect = true, OrigLocal = info.Src,
+                TargetIfIdx = target.IfIndex,
+            }); // Track without rewriting packets already on the target adapter.
 
         if (snap.ExcludeLocalNetworks && snap.AdaptersByIfIndex.TryGetValue(addr.IfIdx, out var origAdapter)
             && origAdapter.IsLocalDestination(info.Dst))
@@ -240,6 +250,15 @@ internal sealed class PacketProcessor
             return true;
 
         var key = new FlowKey(info.Protocol, info.DstPort, info.Src, info.SrcPort);
+        if (Table.TryGet(key, out var direct) && direct.TrackDirect
+            && direct.Generation == Snapshot.Generation && direct.OrigLocal == info.Dst
+            && direct.TargetIfIdx == addr.IfIdx && direct.Rule != null)
+        {
+            Interlocked.Add(ref direct.Rule.Stats.BytesIn, info.Length);
+            Volatile.Write(ref direct.LastSeen, Environment.TickCount64);
+            if (info.IsFin || info.IsRst) direct.Closing = 1;
+            return true;
+        }
         FlowEntry? entry = null;
         if (Table.TryGet(key, out var e) && e.Action == FlowAction.Nat && e.NatLocal == info.Dst)
             entry = e;

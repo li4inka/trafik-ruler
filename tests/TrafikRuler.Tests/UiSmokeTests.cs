@@ -143,6 +143,8 @@ public class UiSmokeTests
     [InlineData(true, "en")]
     [InlineData(false, "ru")]
     [InlineData(true, "ru")]
+    [InlineData(false, "zh")]
+    [InlineData(true, "zh")]
     public void MainWindow_RendersWithRules(bool dark, string lang)
     {
         WithLook(dark, lang, () =>
@@ -233,6 +235,8 @@ public class UiSmokeTests
     [InlineData(true, "en")]
     [InlineData(false, "ru")]
     [InlineData(true, "ru")]
+    [InlineData(false, "zh")]
+    [InlineData(true, "zh")]
     public void RuleWindow_Renders(bool dark, string lang)
     {
         WithLook(dark, lang, () =>

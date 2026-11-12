@@ -67,7 +67,7 @@
                                 <StackPanel Orientation="Horizontal">
                                     <Ellipse x:Name="BadgeDot" Width="6" Height="6" Margin="0,1,6,0" VerticalAlignment="Center"
                                              Fill="{DynamicResource State.Off}" />
-                                    <TextBlock x:Name="BadgeText" Text="{Binding StateText}" FontSize="12" FontWeight="SemiBold"
+                                    <TextBlock x:Name="BadgeText" Text="{Binding StateText}" ToolTip="{Binding DiagnosticText}" FontSize="12" FontWeight="SemiBold"
                                                Foreground="{DynamicResource State.Off}" />
                                 </StackPanel>
                             </Border>
@@ -142,17 +142,25 @@
 
         <!-- Чип адаптера -->
         <DataTemplate x:Key="AdapterChip">
-            <Border x:Name="Chip" CornerRadius="6" Padding="10,6,12,6" Margin="0,0,8,8" BorderThickness="1"
+            <Border x:Name="Chip" Width="320" CornerRadius="6" Padding="10,6,12,6" Margin="0,0,8,8" BorderThickness="1"
                     Background="{DynamicResource Card.Bg}" BorderBrush="{DynamicResource Card.Stroke}"
                     ToolTip="{Binding ToolTipText}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="Glyph" Style="{StaticResource Icon}" Text="{Binding Glyph}" FontSize="15" Margin="0,0,8,0"
-                               Foreground="{DynamicResource Text.Secondary}" />
-                    <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding IpText}" Style="{StaticResource Text.Caption}" Margin="8,0,0,0" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding SpeedText}" Style="{StaticResource Text.CaptionTertiary}" Margin="12,0,0,0"
-                               VerticalAlignment="Center" />
-                </StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="23" />
+                        <ColumnDefinition Width="60" />
+                        <ColumnDefinition Width="92" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="Glyph" Style="{StaticResource Icon}" Text="{Binding Glyph}" FontSize="15"
+                               VerticalAlignment="Center" Foreground="{DynamicResource Text.Secondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding IpText}" Style="{StaticResource Text.Caption}" Margin="8,0,0,0"
+                               TextTrimming="CharacterEllipsis" ToolTip="{Binding IpText}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="{Binding SpeedText}" Style="{StaticResource Text.CaptionTertiary}" Margin="8,0,0,0"
+                               TextAlignment="Right" TextTrimming="CharacterEllipsis" ToolTip="{Binding SpeedText}" VerticalAlignment="Center" />
+                </Grid>
             </Border>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsUsed}" Value="True">

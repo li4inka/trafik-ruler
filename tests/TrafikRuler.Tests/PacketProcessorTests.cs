@@ -103,6 +103,25 @@ public class PacketProcessorTests
     }
 
     [Fact]
+    public void AlreadyOnTarget_CountsBothWaysWithoutRewriting()
+    {
+        var syn = Tcp(WifiIp, 50000, Server, 443, TcpFlags.Syn);
+        var original = syn.ToArray();
+        Assert.True(Out(syn, out var a, WifiIf));
+        Assert.Equal(original, syn);
+        Assert.Equal(WifiIf, a.IfIdx);
+        Assert.Equal(syn.Length, _stats.BytesOut);
+        Assert.Equal(1, _stats.ActiveFlows);
+        var reply = Tcp(Server, 443, WifiIp, 50000, TcpFlags.Syn | TcpFlags.Ack);
+        original = reply.ToArray();
+        Assert.True(In(reply, out _));
+        Assert.Equal(original, reply);
+        Assert.Equal(reply.Length, _stats.BytesIn);
+        var entry = Assert.Single(_processor.Table.Entries);
+        Assert.True(_processor.Table.Remove(entry));
+        Assert.Equal(0, _stats.ActiveFlows);
+    }
+    [Fact]
     public void NewTcpConnection_IsTranslatedBothWays()
     {
         var syn = Tcp(EthIp, 50000, Server, 443, TcpFlags.Syn, mss: 1460);
