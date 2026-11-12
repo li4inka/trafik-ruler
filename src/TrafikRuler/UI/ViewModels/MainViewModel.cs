@@ -209,7 +209,7 @@ internal sealed class MainViewModel : ObservableObject, IDisposable
         foreach (var gone in byId.Values)
             Rules.Remove(gone);
 
-        // Адаптеры: показываем подключённые с IPv4, а также те, на которые ссылаются правила.
+        // Адаптеры: показываем подключённые с IPv4 или IPv6, а также те, на которые ссылаются правила.
         var used = views.Where(v => v.State == RuleState.Active && v.Target != null).Select(v => v.Target!.Id).ToHashSet();
         var visible = adapters.Where(a => a.IsUsable || used.Contains(a.Id)).ToList();
         var chips = Adapters.ToDictionary(a => a.Id);

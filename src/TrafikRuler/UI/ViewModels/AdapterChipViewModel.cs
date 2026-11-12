@@ -20,7 +20,9 @@ internal sealed class AdapterChipViewModel : ObservableObject
     public string Name => _info.Name;
     public string Glyph => Glyphs.ForAdapter(_info.Kind);
     public string KindLabel => _info.KindLabel;
-    public string IpText => _info.IPv4 is { } a ? Addr.Format(a) : Loc.T("NoIPv4");
+    public string IpText => _info.IPv4 is { } v4 ? Addr.Format(v4)
+        : _info.IPv6 is { } v6 ? Addr.Format(v6)
+        : Loc.T("NoIP");
     public string ToolTipText => $"{_info.Description}\n{KindLabel} · {IpText}" + (_info.IPv6 is { } v6 ? $"\n{Addr.Format(v6)}" : "");
 
     /// <summary>Через этот адаптер идёт хотя бы одно активное правило.</summary>

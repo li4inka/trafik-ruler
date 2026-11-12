@@ -222,6 +222,25 @@ public class PacketProcessorTests
     }
 
     [Fact]
+    public void Ipv6OnlyTarget_IsUsableAndTranslated()
+    {
+        var target = new AdapterInfo
+        {
+            Id = "wifi", Name = "Wi-Fi", Description = "IPv6-only Wi-Fi", Kind = AdapterKind.WiFi,
+            IsUp = true, IfIndex = WifiIf, IPv6 = A("2001:db8:1::77"), HasGateway = true, Mtu = 1400,
+            Subnets = [Subnet.From(A("2001:db8:1::77"), 64, v4: false)],
+        };
+        Assert.True(target.IsUsable);
+        Apply(RuleState.Active, target);
+
+        var syn = Tcp("2001:db8:2::15", 50002, "2606:2800:220:1::1946", 443, TcpFlags.Syn);
+        Assert.True(Out(syn, out var addr));
+        Assert.Equal(A("2001:db8:1::77"), Parse(syn).Src);
+        Assert.Equal(WifiIf, addr.IfIdx);
+        Assert.True(ReferenceValid(syn));
+    }
+
+    [Fact]
     public void Udp_IsTranslated_AndRepliesFromNewPeersAccepted()
     {
         var q = Udp(EthIp, 50001, "8.8.8.8", 53);

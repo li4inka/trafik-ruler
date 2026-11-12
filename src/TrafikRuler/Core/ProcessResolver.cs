@@ -10,6 +10,9 @@ internal interface IProcessResolver
     /// <summary>PID владельца локального порта, или null, если определить не удалось.</summary>
     uint? ResolvePid(byte protocol, ushort localPort);
 
+    /// <summary>PID владельца локального порта с учётом семейства адресов.</summary>
+    uint? ResolvePid(byte protocol, ushort localPort, bool ipv6) => ResolvePid(protocol, localPort);
+
     /// <summary>Полный путь к exe процесса (кэшируется с проверкой времени старта процесса).</summary>
     string? GetImagePath(uint pid);
 }
@@ -30,7 +33,7 @@ internal sealed class ProcessResolver : IProcessResolver, IDisposable
 
     public event Action<string>? Log;
 
-    private static int Key(byte proto, ushort port) => (proto << 16) | port;
+    private static int Key(byte proto, ushort port, bool ipv6) => (proto << 17) | (ipv6 ? 1 << 16 : 0) | port;
 
     public void Start()
     {
@@ -82,7 +85,7 @@ internal sealed class ProcessResolver : IProcessResolver, IDisposable
             if (proto != Packet.ProtoTcp && proto != Packet.ProtoUdp)
                 continue;
 
-            int key = Key(proto, addr.LocalPort);
+            int key = Key(proto, addr.LocalPort, addr.IPv6);
             switch (addr.Event)
             {
                 case WinDivertEvent.SocketBind:
@@ -101,8 +104,11 @@ internal sealed class ProcessResolver : IProcessResolver, IDisposable
     }
 
     public uint? ResolvePid(byte protocol, ushort localPort)
+        => ResolvePid(protocol, localPort, ipv6: false);
+
+    public uint? ResolvePid(byte protocol, ushort localPort, bool ipv6)
     {
-        int key = Key(protocol, localPort);
+        int key = Key(protocol, localPort, ipv6);
         if (_portOwners.TryGetValue(key, out uint pid))
             return pid;
 
@@ -130,14 +136,14 @@ internal sealed class ProcessResolver : IProcessResolver, IDisposable
                 foreach (bool v6 in new[] { false, true })
                     foreach (var c in IpHelper.GetTcpConnections(v6))
                         if (c.LocalPort != 0)
-                            _portOwners[Key(Packet.ProtoTcp, c.LocalPort)] = c.Pid;
+                            _portOwners[Key(Packet.ProtoTcp, c.LocalPort, v6)] = c.Pid;
             }
             else
             {
                 foreach (bool v6 in new[] { false, true })
                     foreach (var u in IpHelper.GetUdpEndpoints(v6))
                         if (u.LocalPort != 0)
-                            _portOwners[Key(Packet.ProtoUdp, u.LocalPort)] = u.Pid;
+                            _portOwners[Key(Packet.ProtoUdp, u.LocalPort, v6)] = u.Pid;
             }
         }
         catch (Exception ex)
